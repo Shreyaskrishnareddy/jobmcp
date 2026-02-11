@@ -1,25 +1,14 @@
-import fitz # PyMuPDF
-import os 
-from dotenv import load_dotenv
-from openai import OpenAI
-
-
-load_dotenv()
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
-
-
-client = OpenAI(api_key=OPENAI_API_KEY)
+import fitz  # PyMuPDF
+from src.llm_provider import get_completion
 
 
 def extract_text_from_pdf(uploaded_file):
     """
     Extracts text from a PDF file.
-    
+
     Args:
-        uploaded_file (str): The path to the PDF file.
-        
+        uploaded_file: The uploaded PDF file object.
+
     Returns:
         str: The extracted text.
     """
@@ -30,33 +19,15 @@ def extract_text_from_pdf(uploaded_file):
     return text
 
 
-
-def ask_openai(prompt, max_tokens=500):
+def ask_llm(prompt, max_tokens=500):
     """
-    Sends a prompt to the OpenAI API and returns the response.
-    
+    Sends a prompt to the configured LLM provider and returns the response.
+
     Args:
-        prompt (str): The prompt to send to the OpenAI API.
-        model (str): The model to use for the request.
-        temperature (float): The temperature for the response.
-        
+        prompt (str): The prompt to send.
+        max_tokens (int): Maximum tokens for the response.
+
     Returns:
-        str: The response from the OpenAI API.
+        str: The response from the LLM.
     """
-    
-
-    response = client.chat.completions.create(
-        model= "gpt-4o",
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        temperature=0.5,
-        max_tokens=max_tokens
-    )
-
-    return response.choices[0].message.content
-
-
+    return get_completion(prompt, max_tokens=max_tokens)

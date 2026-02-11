@@ -1,5 +1,7 @@
-streamlit
-openai 
-pymupdf 
-python-dotenv
-apify-client
+flask==3.0.0
+flask-cors==4.0.0
+gunicorn==21.2.0
+groq==0.4.2
+pymupdf==1.23.8
+python-dotenv==1.0.0
+requests==2.31.0

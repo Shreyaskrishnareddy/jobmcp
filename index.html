@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Job Recommender</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f7; min-height: 100vh; color: #1d1d1f;
+        }
+        .container {
+            max-width: 720px; margin: 60px auto; padding: 0 24px;
+        }
+        h1 {
+            font-size: 2.5rem; font-weight: 700; text-align: center;
+            margin-bottom: 8px; letter-spacing: -0.03em;
+        }
+        .subtitle {
+            text-align: center; color: #86868b; margin-bottom: 40px;
+            font-size: 1.1rem; font-weight: 400;
+        }
+        .upload-area {
+            background: white; border: 2px dashed #d1d1d6;
+            border-radius: 12px; padding: 48px 32px; text-align: center;
+            transition: all 0.2s ease; cursor: pointer; margin-bottom: 24px;
+        }
+        .upload-area:hover { border-color: #007aff; }
+        .upload-area.dragover { border-color: #007aff; background: #f0f8ff; }
+        .upload-icon {
+            width: 48px; height: 48px; margin: 0 auto 16px;
+            background: #f0f8ff; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #fileInput { display: none; }
+        .upload-text { font-size: 1.1rem; font-weight: 500; margin-bottom: 4px; }
+        .upload-subtext { color: #86868b; font-size: 0.95rem; }
+        .btn {
+            background: #007aff; color: white; border: none;
+            padding: 12px 24px; border-radius: 8px; font-size: 1rem;
+            font-weight: 500; cursor: pointer; margin-top: 16px;
+            transition: background 0.2s ease;
+        }
+        .btn:hover { background: #0056cc; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-secondary {
+            background: #34c759; margin-top: 24px; width: 100%;
+        }
+        .btn-secondary:hover { background: #2db350; }
+        .loading {
+            display: none; text-align: center; margin: 32px 0;
+        }
+        .spinner {
+            border: 2px solid #f0f0f0; border-top: 2px solid #007aff;
+            border-radius: 50%; width: 24px; height: 24px;
+            animation: spin 1s linear infinite; margin: 0 auto 12px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .results { margin-top: 24px; display: none; }
+        .card {
+            background: white; border-radius: 12px; padding: 24px;
+            margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .card h3 {
+            font-size: 1rem; font-weight: 600; color: #007aff;
+            margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+        }
+        .card p, .card ul {
+            color: #333; line-height: 1.6; font-size: 0.95rem;
+        }
+        .card ul { padding-left: 20px; }
+        .card li { margin-bottom: 6px; }
+
+        .jobs-section { display: none; margin-top: 24px; }
+        .job-card {
+            background: white; border-radius: 10px; padding: 16px 20px;
+            margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            transition: transform 0.2s ease;
+        }
+        .job-card:hover { transform: translateY(-2px); }
+        .job-title { font-weight: 600; font-size: 1rem; margin-bottom: 4px; }
+        .job-company { color: #555; font-size: 0.9rem; }
+        .job-location { color: #86868b; font-size: 0.85rem; margin: 4px 0; }
+        .job-link {
+            color: #007aff; text-decoration: none; font-size: 0.9rem;
+            font-weight: 500;
+        }
+        .job-link:hover { text-decoration: underline; }
+
+        .error {
+            background: #ffeaea; border: 1px solid #ff6b6b;
+            color: #d63031; padding: 12px; border-radius: 8px;
+            margin: 16px 0; display: none;
+        }
+        .keywords-badge {
+            background: #e8f4fd; color: #007aff; padding: 8px 16px;
+            border-radius: 20px; font-size: 0.9rem; display: inline-block;
+            margin-bottom: 16px;
+        }
+        .file-name {
+            background: #e8f4fd; color: #007aff; padding: 8px 16px;
+            border-radius: 8px; font-size: 0.9rem; margin-top: 12px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Job Recommender</h1>
+        <p class="subtitle">Upload your resume and get personalized job recommendations</p>
+
+        <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+            <div class="upload-icon">
+                <svg width="24" height="24" fill="none" stroke="#007aff" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+            </div>
+            <div class="upload-text">Drop resume here or click to browse</div>
+            <div class="upload-subtext">PDF files only (Max 10MB)</div>
+            <button class="btn" type="button">Choose File</button>
+            <input type="file" id="fileInput" accept=".pdf">
+            <div class="file-name" id="fileName"></div>
+        </div>
+
+        <div class="error" id="errorDiv"></div>
+
+        <div class="loading" id="loadingDiv">
+            <div class="spinner"></div>
+            <p id="loadingText">Analyzing resume...</p>
+        </div>
+
+        <div class="results" id="resultsDiv">
+            <div class="card">
+                <h3>📑 Resume Summary</h3>
+                <p id="summaryText"></p>
+            </div>
+            <div class="card">
+                <h3>🛠️ Skill Gaps</h3>
+                <div id="gapsText"></div>
+            </div>
+            <div class="card">
+                <h3>🚀 Career Roadmap</h3>
+                <div id="roadmapText"></div>
+            </div>
+            <button class="btn btn-secondary" id="getJobsBtn" onclick="getJobs()">
+                🔎 Get Job Recommendations
+            </button>
+        </div>
+
+        <div class="jobs-section" id="jobsSection">
+            <div class="card">
+                <h3>💼 Recommended Jobs</h3>
+                <div class="keywords-badge" id="keywordsBadge"></div>
+                <div id="jobsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const loadingDiv = document.getElementById('loadingDiv');
+        const loadingText = document.getElementById('loadingText');
+        const resultsDiv = document.getElementById('resultsDiv');
+        const errorDiv = document.getElementById('errorDiv');
+        const jobsSection = document.getElementById('jobsSection');
+        const fileName = document.getElementById('fileName');
+
+        let currentData = null;
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) processFile(files[0]);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) processFile(e.target.files[0]);
+        });
+
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            loadingDiv.style.display = 'none';
+        }
+
+        function processFile(file) {
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                showError('Please upload a PDF file');
+                return;
+            }
+
+            fileName.textContent = '📄 ' + file.name;
+            fileName.style.display = 'block';
+            errorDiv.style.display = 'none';
+            resultsDiv.style.display = 'none';
+            jobsSection.style.display = 'none';
+            loadingText.textContent = 'Analyzing resume...';
+            loadingDiv.style.display = 'block';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/analyze', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadingDiv.style.display = 'none';
+                if (data.error) {
+                    showError(data.error);
+                } else {
+                    displayResults(data);
+                }
+            })
+            .catch(error => {
+                loadingDiv.style.display = 'none';
+                showError('Network error. Please try again.');
+            });
+        }
+
+        function displayResults(data) {
+            currentData = data;
+            document.getElementById('summaryText').textContent = data.summary;
+            document.getElementById('gapsText').innerHTML = formatText(data.gaps);
+            document.getElementById('roadmapText').innerHTML = formatText(data.roadmap);
+            resultsDiv.style.display = 'block';
+        }
+
+        function formatText(text) {
+            // Convert bullet points and newlines to HTML
+            return text
+                .split('\n')
+                .map(line => line.trim())
+                .filter(line => line)
+                .map(line => {
+                    if (line.startsWith('-') || line.startsWith('•') || line.match(/^\d+\./)) {
+                        return '<li>' + line.replace(/^[-•]\s*/, '').replace(/^\d+\.\s*/, '') + '</li>';
+                    }
+                    return '<p>' + line + '</p>';
+                })
+                .join('')
+                .replace(/<li>/g, '<ul><li>')
+                .replace(/<\/li>(?!<li>)/g, '</li></ul>')
+                .replace(/<\/ul><ul>/g, '');
+        }
+
+        function getJobs() {
+            const btn = document.getElementById('getJobsBtn');
+            btn.disabled = true;
+            btn.textContent = 'Searching...';
+            loadingText.textContent = 'Finding matching jobs...';
+            loadingDiv.style.display = 'block';
+
+            fetch('/jobs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    summary: currentData.summary,
+                    resume_text: currentData.resume_text
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                loadingDiv.style.display = 'none';
+                btn.disabled = false;
+                btn.textContent = '🔎 Get Job Recommendations';
+
+                if (data.error) {
+                    showError(data.error);
+                } else {
+                    displayJobs(data);
+                }
+            })
+            .catch(error => {
+                loadingDiv.style.display = 'none';
+                btn.disabled = false;
+                btn.textContent = '🔎 Get Job Recommendations';
+                showError('Failed to fetch jobs. Please try again.');
+            });
+        }
+
+        function displayJobs(data) {
+            document.getElementById('keywordsBadge').textContent = '🔍 ' + data.keywords;
+
+            const jobsList = document.getElementById('jobsList');
+            jobsList.innerHTML = '';
+
+            if (data.jobs.length === 0) {
+                jobsList.innerHTML = '<p style="color: #86868b;">No jobs found. Try adjusting your resume.</p>';
+            } else {
+                data.jobs.forEach(job => {
+                    jobsList.innerHTML += `
+                        <div class="job-card">
+                            <div class="job-title">${job.title}</div>
+                            <div class="job-company">${job.company}</div>
+                            <div class="job-location">📍 ${job.location}</div>
+                            <a href="${job.link}" target="_blank" class="job-link">Apply →</a>
+                        </div>
+                    `;
+                });
+            }
+
+            jobsSection.style.display = 'block';
+            jobsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
